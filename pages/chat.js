@@ -1,17 +1,50 @@
 import { Box, Text, TextField, Image, Button } from '@skynexui/components';
 import React from 'react';
 import appConfig from '../config.json';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTY0MzMzNTI1NSwiZXhwIjoxOTU4OTExMjU1fQ.DOIrCQai3L05rlciL2wohPtUBB4o8L8fN3N3Loiy9FI';
+const SUPABASE_URL = 'https://pjsfugegrsbmmqxqwbgu.supabase.co';
+const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const dadosDoSupaBase = supabaseClient
+    .from('mensagens')
+    .select('*')
+;
+
+console.log(dadosDoSupaBase);
 
 export default function ChatPage() {
     const [mensagem, setMensagem] = React.useState('');
     const [listaDeMensagens, setListaDeMensagens] = React.useState([]);
 
+    React.useEffect(() => {
+        supabaseClient
+            .from('mensagens')
+            .select('*')
+            .order('id', { ascending: false })
+            .then(({ data }) => {
+                setListaDeMensagens(data);
+            });
+    }, []);
+
     function handleNovaMensagem(novaMensagem) {
         const mensagem = {
-            id: listaDeMensagens.length + 1,
-            de: 'kakaroto',
+            de: 'alura',
             texto: novaMensagem
         };
+
+        supabaseClient
+            .from('mensagens')
+            .insert([
+                mensagem
+            ])
+            .then(({ data }) => {
+                setListaDeMensagens([
+                    data[0],
+                    ...listaDeMensagens
+                ]);
+            });
 
         setListaDeMensagens([
             mensagem,
@@ -21,9 +54,17 @@ export default function ChatPage() {
         setMensagem('');
     }
 
-    function handleDeleteMensagem(mensagemId) {
-        const updatedListaDeMensagens = listaDeMensagens.filter(mensagem => mensagem.id !== mensagemId);
+    async function handleDeleteMensagem(mensagemId) {
+        const { data, error } = await supabaseClient
+        .from('mensagens')
+        .delete()
+        .match({ id: mensagemId })
 
+        if (data.length === 0 || data.length === null) {
+            return;
+        }
+            
+        const updatedListaDeMensagens = listaDeMensagens.filter(mensagem => mensagem.id !== mensagemId);
         setListaDeMensagens(updatedListaDeMensagens);
     }
 
@@ -171,7 +212,7 @@ function MessageList(props) {
                                 display: 'inline-block',
                                 marginRight: '8px',
                             }}
-                            src={`https://github.com/vanessametonini.png`}
+                            src={`https://github.com/${mensagem.de}.png`}
                         />
                         <Text tag="strong">
                             {mensagem.de}
