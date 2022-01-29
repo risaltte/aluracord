@@ -9,11 +9,14 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5v
 const SUPABASE_URL = 'https://pjsfugegrsbmmqxqwbgu.supabase.co';
 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-function escutaMensagensEmTempoReal(adicionaMensagem) {
+function escutaMensagensEmTempoReal(adicionaMensagem, atualizaListaDeMensagens) {
     return supabaseClient
         .from('mensagens')
         .on('INSERT', (respostaLive) => {
             adicionaMensagem(respostaLive.new);
+        })
+        .on('DELETE', (respostaLive) => {
+            atualizaListaDeMensagens(respostaLive.old);
         })
         .subscribe();
 
@@ -35,14 +38,25 @@ export default function ChatPage() {
                 setListaDeMensagens(data);
             });
         
-        escutaMensagensEmTempoReal((novaMensagem) => {
-            setListaDeMensagens((valorAtualDaLista) => {
-                return [
-                    novaMensagem,
-                    ...valorAtualDaLista
-                ]
-            });
-        });
+        escutaMensagensEmTempoReal(
+            (novaMensagem) => {
+                setListaDeMensagens((valorAtualDaLista) => {
+                    return [
+                        novaMensagem,
+                        ...valorAtualDaLista
+                    ]
+                });
+            },
+            (mensagemDeletada) => {
+                setListaDeMensagens((valorAtualDaLista) => {
+                    const updatedListaDeMensagens = valorAtualDaLista.filter(mensagem => mensagem.id !== mensagemDeletada.id);
+
+                    return [
+                        ...updatedListaDeMensagens
+                    ]
+                });
+            }
+        );
 
     }, []);
 
@@ -83,9 +97,6 @@ export default function ChatPage() {
         if (data.length === 0 || data.length === null) {
             return;
         }
-            
-        const updatedListaDeMensagens = listaDeMensagens.filter(mensagem => mensagem.id !== mensagemId);
-        setListaDeMensagens(updatedListaDeMensagens);
     }
 
     return (
