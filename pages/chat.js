@@ -1,7 +1,7 @@
 import { Box, Text, TextField, Image, Button } from '@skynexui/components';
 import React from 'react';
 import appConfig from '../config.json';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/router';
 import { ButtonSendSticker } from '../src/components/ButtonSendSticker';
 
@@ -271,13 +271,14 @@ function MessageList(props) {
                             {(new Date().toLocaleDateString())}
                         </Text>
                         <Button 
-                            label='x'
+                            label='🗑️'
                             onClick={() => props.onDeleteMessage(mensagem.id)}
                             styleSheet={{
-                                width: '5px',
+                                minWidth: '20px',
+                                minHeight: '20px',
                                 background: 'transparent',
-                                padding: '0 8px',
-                                borderRadius: '80px',
+                                padding: '2px 4px',
+                                borderRadius: '50%',
                                 marginLeft: '10px',
                                 display: props.usuarioLogado === mensagem.de ? 'inline-block' : 'none'
                             }}
