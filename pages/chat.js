@@ -2,21 +2,29 @@ import { Box, Text, TextField, Image, Button } from '@skynexui/components';
 import React from 'react';
 import appConfig from '../config.json';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { useRouter } from 'next/router';
+import { ButtonSendSticker } from '../src/components/ButtonSendSticker';
 
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTY0MzMzNTI1NSwiZXhwIjoxOTU4OTExMjU1fQ.DOIrCQai3L05rlciL2wohPtUBB4o8L8fN3N3Loiy9FI';
 const SUPABASE_URL = 'https://pjsfugegrsbmmqxqwbgu.supabase.co';
 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const dadosDoSupaBase = supabaseClient
-    .from('mensagens')
-    .select('*')
-;
+function escutaMensagensEmTempoReal(adicionaMensagem) {
+    return supabaseClient
+        .from('mensagens')
+        .on('INSERT', (respostaLive) => {
+            adicionaMensagem(respostaLive.new);
+        })
+        .subscribe();
 
-console.log(dadosDoSupaBase);
+}
 
 export default function ChatPage() {
+    const roteamento = useRouter();
     const [mensagem, setMensagem] = React.useState('');
     const [listaDeMensagens, setListaDeMensagens] = React.useState([]);
+
+    const usuarioLogado = roteamento.query.username;
 
     React.useEffect(() => {
         supabaseClient
@@ -26,11 +34,25 @@ export default function ChatPage() {
             .then(({ data }) => {
                 setListaDeMensagens(data);
             });
+        
+        escutaMensagensEmTempoReal((novaMensagem) => {
+            setListaDeMensagens((valorAtualDaLista) => {
+                return [
+                    novaMensagem,
+                    ...valorAtualDaLista
+                ]
+            });
+        });
+
     }, []);
 
     function handleNovaMensagem(novaMensagem) {
+        if (novaMensagem === '') {
+            return;
+        }
+
         const mensagem = {
-            de: 'alura',
+            de: usuarioLogado,
             texto: novaMensagem
         };
 
@@ -40,21 +62,19 @@ export default function ChatPage() {
                 mensagem
             ])
             .then(({ data }) => {
-                setListaDeMensagens([
-                    data[0],
-                    ...listaDeMensagens
-                ]);
+               
             });
-
-        setListaDeMensagens([
-            mensagem,
-            ...listaDeMensagens
-        ]);
 
         setMensagem('');
     }
 
     async function handleDeleteMensagem(mensagemId) {
+        const mensagem = listaDeMensagens.find(mensagem => mensagem.id === mensagemId);
+
+        if (!mensagem || mensagem.de !== usuarioLogado) {
+            return;
+        }
+
         const { data, error } = await supabaseClient
         .from('mensagens')
         .delete()
@@ -106,7 +126,7 @@ export default function ChatPage() {
                     }}
                 >
 
-                    <MessageList mensagens={listaDeMensagens} onDeleteMessage={handleDeleteMensagem}/>
+                    <MessageList mensagens={listaDeMensagens} onDeleteMessage={handleDeleteMensagem} usuarioLogado={usuarioLogado}/>
 
                     <Box
                         as="form"
@@ -137,11 +157,20 @@ export default function ChatPage() {
                                 color: appConfig.theme.colors.neutrals[200],
                             }}
                         />
+                        <ButtonSendSticker 
+                            onStickerClick={(sticker) => {
+                                handleNovaMensagem(':sticker: ' + sticker);
+                              }}
+                        />
                         <Button 
                             iconName="arrowRight" 
                             onClick={() => handleNovaMensagem(mensagem)}
                             colorVariant="positive"
                             styleSheet={{
+                                minWidth: '50px',
+                                minHeight: '50px',
+                                fontSize: '20px',
+                                marginLeft: '8px',
                                 transition: 'background 0.2s',
                                 background: appConfig.theme.colors.primary[700],
                                 alignSelf: 'flex-start'
@@ -155,6 +184,8 @@ export default function ChatPage() {
 }
 
 function Header() {
+    const roteamento = useRouter();
+
     return (
         <>
             <Box styleSheet={{ width: '100%', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} >
@@ -162,6 +193,7 @@ function Header() {
                     Chat
                 </Text>
                 <Button
+                    onClick={() => roteamento.push('/')}
                     variant='tertiary'
                     colorVariant='neutral'
                     label='Logout'
@@ -177,7 +209,7 @@ function MessageList(props) {
         <Box
             tag="ul"
             styleSheet={{
-                // overflow: 'scroll',
+                overflowY: 'scroll',
                 display: 'flex',
                 flexDirection: 'column-reverse',
                 flex: 1,
@@ -235,11 +267,25 @@ function MessageList(props) {
                                 background: 'transparent',
                                 padding: '0 8px',
                                 borderRadius: '80px',
-                                marginLeft: '10px'
+                                marginLeft: '10px',
+                                display: props.usuarioLogado === mensagem.de ? 'inline-block' : 'none'
                             }}
                         />
                     </Box>
-                    {mensagem.texto}
+                    {mensagem.texto.startsWith(':sticker:')
+                        ? (
+                            <Image 
+                                src={mensagem.texto.replace(':sticker:', '')}
+                                styleSheet={{
+                                    maxWidth: '300px'
+                                }}
+                            
+                            />
+                        )
+                        : (
+                            mensagem.texto
+                        )
+                    }
                 </Text>
             ))}
         </Box>

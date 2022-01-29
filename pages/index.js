@@ -54,7 +54,7 @@ export default function PaginaInicial() {
                         as="form"
                         onSubmit={(event) => {
                             event.preventDefault();
-                            roteamento.push('/chat');
+                            roteamento.push(`/chat?username=${username}`);
                         }}
                         styleSheet={{
                             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -82,7 +82,7 @@ export default function PaginaInicial() {
                         <Button
                             type='submit'
                             label='Entrar'
-                            disabled={ username.length <= 2 }
+                            disabled={ username.length <= 1 }
                             fullWidth
                             buttonColors={{
                                 contrastColor: appConfig.theme.colors.neutrals["000"],
